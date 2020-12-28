@@ -4,13 +4,13 @@ April 24 3030
 POSGRESQL
 
 PART1 Environment Setting
-1. CREATE DATABASE dbname 
+1. CREATE DATABASE dbname
 
 reset schema:
 drop schema public cascade;
 create schema public;
 
-May 7 - Thu: 13.00 - 13.15	
+May 7 - Thu: 13.00 - 13.15
 Hyunwoo Choi
  */
 CREATE TABLE IF NOT EXISTS Department (
@@ -68,7 +68,7 @@ CREATE TABLE IF NOT EXISTS Student (
 );
 
 
-/* 
+/*
 INSERT INTO student( student_id,first_name,last_name,student_ssn,student_residency) VALUES ("a91407351","Hyunwoo", "Choi", "1234", "Internationol");
  */
 CREATE TABLE IF NOT EXISTS Undergraduate (
@@ -138,12 +138,21 @@ CREATE TABLE IF NOT EXISTS technical_elective (
 );
 
 CREATE TABLE IF NOT EXISTS Concentration (
-    index SERIAL UNIQUE,
-    con_dept varchar(30) NOT NULL,
-    con_number varchar(30) NOT NULL,
-    min_gpa numeric(3, 2) DEFAULT 2.00,
-    PRIMARY KEY (con_dept, con_number),
-    FOREIGN KEY (con_dept, con_number) REFERENCES Courses (course_dept, course_number)
+    c_name varchar(30) NOT NULL,
+    min_unit integer NOT NULL DEFAULT 4,
+    min_gpa numeric(3, 2) NOT NULL DEFAULT 2.00,
+    c_dept varchar(30) NOT NULL DEFAULT 'CSE',
+    c_major varchar(30) NOT NULL DEFAULT 'Computer Science',
+    PRIMARY KEY (c_name)
+);
+
+CREATE TABLE IF NOT EXISTS Concentration_Course (
+    cname varchar(30) NOT NULL,
+    course_dept varchar(30) NOT NULL,
+    course_number varchar(30) NOT NULL,
+    PRIMARY KEY (course_dept, course_number),
+    FOREIGN KEY (cname) REFERENCES Concentration (c_name),
+    FOREIGN KEY (course_dept, course_number) REFERENCES Courses (course_dept, course_number)
 );
 
 CREATE TABLE IF NOT EXISTS SectionWaitlist (
@@ -171,19 +180,30 @@ CREATE TABLE IF NOT EXISTS WeeklySchedule (
     sched_type varchar(30) NOT NULL,
     sched_day varchar(30) NOT NULL,
     start_time time NOT NULL,
-    end_time time NOT NULL,
-    PRIMARY KEY (section_id, sched_type, sched_day),
+    end_time time,
+    PRIMARY KEY (index),
     FOREIGN KEY (section_id) REFERENCES Section (section_id)
 );
 
-CREATE TABLE IF NOT EXISTS ReviewSchedule (
+CREATE TABLE IF NOT EXISTS quarter_schedule (
+    index SERIAL UNIQUE,
+    sid varchar(30) NOT NULL,
+    sch_type varchar(30) NOT NULL DEFAULT 'LE',
+    start_time timestamp NOT NULL,
+    end_time timestamp NOT NULL,
+    id integer NOT NULL,
+    PRIMARY KEY (index),
+    FOREIGN KEY (sid) REFERENCES Section (section_id),
+    FOREIGN KEY (id) REFERENCES WeeklySchedule (INDEX)
+);
+
+CREATE TABLE IF NOT EXISTS NonweeklySchedule (
     index SERIAL UNIQUE,
     section_id varchar(30) NOT NULL,
-    review_type varchar(30) NOT NULL,
-    review_day varchar(30) NOT NULL,
-    start_time time NOT NULL,
-    end_time time NOT NULL,
-    PRIMARY KEY (section_id, review_type, review_day),
+    sched_type varchar(30) NOT NULL DEFAULT 'RE',
+    start_time timestamp NOT NULL,
+    end_time timestamp,
+    PRIMARY KEY (index),
     FOREIGN KEY (section_id) REFERENCES Section (section_id)
 );
 
@@ -219,6 +239,51 @@ CREATE TABLE IF NOT EXISTS courseCategory (
     PRIMARY KEY (course_dept, course_number),
     FOREIGN KEY (course_dept, course_number) REFERENCES Courses (course_dept, course_number)
 );
+
+
+CREATE TABLE IF NOT EXISTS class_taught (
+    index SERIAL UNIQUE,
+    course_dept varchar(30),
+    course_number varchar(30),
+    sid varchar(30),
+    class_quarter varchar(30),
+    class_year varchar(30),
+    faculty_first varchar(30),
+    faculty_last varchar(30),
+    PRIMARY KEY (INDEX),
+    FOREIGN KEY (course_dept, course_number) REFERENCES Courses (course_dept, course_number)
+);
+
+CREATE TABLE IF NOT EXISTS quarter_year (
+    index serial UNIQUE,
+    class_quarter varchar(30) NOT NULL,
+    class_year varchar(30) NOT NULL,
+    PRIMARY KEY (INDEX)
+);
+
+INSERT INTO quarter_year (class_quarter, class_year)
+    VALUES ('wi', '2017');
+
+INSERT INTO quarter_year (class_quarter, class_year)
+    VALUES ('fa', '2017');
+
+INSERT INTO quarter_year (class_quarter, class_year)
+    VALUES ('sp', '2017');
+
+INSERT INTO quarter_year (class_quarter, class_year)
+    VALUES ('wi', '2018');
+
+INSERT INTO quarter_year (class_quarter, class_year)
+    VALUES ('fa', '2020');
+
+INSERT INTO quarter_year (class_quarter, class_year)
+    VALUES ('sp', '2020');
+
+INSERT INTO quarter_year (class_quarter, class_year)
+    VALUES ('sp', '2021');
+
+INSERT INTO quarter_year (class_quarter, class_year)
+    VALUES ('wi', '2021');
 
 
 /*

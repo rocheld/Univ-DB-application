@@ -1,13 +1,11 @@
 /*
- 
+
+A91407351 
+Hyunwoo Choi
+
  \i /Applications/apache-tomcat/webapps/cse132/report1.sql 
  
  a. Display the classes currently taken by student X:
- 
- 1. The form is an HTML SELECT control with all students enrolled in the current quarter.   
- Display the SSN, FIRSTNAME, MIDDLENAME and LASTNAME attributes of STUDENTs given their SSN attribute.
- 2. The report should display the classes taken by X in the current quarter.
- 3. On the report page display all attributes of the CLASS entity and the UNITS and SECTION attributes of the relationship connecting STUDENTS with the CLASS they take.
  */
 SELECT
     st.first_name,
@@ -87,18 +85,18 @@ CREATE TABLE QUARTER_ORDER (
 );
 
 INSERT INTO quarter_order
-    VALUES ('spring', 3);
+    VALUES ('sp', 3);
 
 INSERT INTO quarter_order
-    VALUES ('summer', 4);
+    VALUES ('su', 4);
 
 INSERT INTO quarter_order
-    VALUES ('fall', 1);
+    VALUES ('fa', 1);
 
 INSERT INTO quarter_order
-    VALUES ('winter', 2);
+    VALUES ('wi', 2);
 
-* /
+
 /* All classes taken by student x */
 SELECT
     en.*,
@@ -159,21 +157,145 @@ WHERE
             en.pid = st.student_id
             AND en.sid IS NOT NULL);
 
-CREATE VIEW degree_audit AS
 SELECT
-    c.class_dept AS dept,
-    c.class_number AS num,
-    en.grade_earned AS grade,
-    en.unit AS unit,
-    cc.category AS category
+    d.*
 FROM
-    courseEnrollment en
-    INNER JOIN classes c ON en.class_id = c.index
-    INNER JOIN courseCategory cc ON cc.course_dept = c.class_dept
-        AND cc.course_number = c.class_number
+    degree d
 WHERE
-    c.class_dept = 'CSE'
-    AND en.pid = ?;
+    d.degree_name = 'Computer Science';
 
-DROP VIEW degree_audit;
+SELECT
+    st.*,
+    u.*
+FROM
+    student st
+    INNER JOIN undergraduate u ON st.student_id = u.pid
+WHERE
+    st.student_ssn = ?;
+
+
+/* degree audit */
+SELECT
+    d.*
+FROM
+    degree d
+WHERE
+    d.degree_name = 'Computer Science'
+    AND d.degree_type = ?;
+
+CREATE TABLE IF NOT EXISTS degree_audit AS (
+    SELECT
+        c.class_dept,
+        c.class_number,
+        en.grade_earned,
+        en.unit,
+        cc.category
+    FROM
+        courseEnrollment en
+        INNER JOIN classes c ON en.class_id = c.index
+        INNER JOIN courseCategory cc ON cc.course_dept = c.class_dept
+            AND cc.course_number = c.class_number
+    WHERE
+        en.pid = '20'
+);
+
+SELECT
+    sum(unit) AS total_unit
+FROM
+    degree_audit;
+
+SELECT
+    sum(unit) AS lower_unit
+FROM
+    degree_audit
+WHERE
+    category = 'lower';
+
+SELECT
+    sum(unit) AS upper_unit
+FROM
+    degree_audit
+WHERE
+    class_dept = 'CSE'
+    AND category = 'upper'
+    SELECT
+        sum(unit) AS tech_unit
+    FROM
+        degree_audit d
+        INNER JOIN technical_elective t ON t.elec_dept = d.class_dept
+            AND t.elec_number = d.class_number;
+
+SELECT
+    sum(unit) AS grad_unit
+FROM
+    degree_audit
+WHERE
+    class_dept = 'CSE'
+    AND category = 'grad';
+
+
+/* e. ms require_ment */
+/* returns completed concentration */
+SELECT
+    *
+FROM
+    concentration c
+WHERE
+    NOT EXISTS (
+        SELECT
+            *
+        FROM
+            concentration_course co
+        WHERE
+            c.c_name = co.cname
+            AND NOT EXISTS (
+                SELECT
+                    *
+                FROM
+                    degree_audit d
+                WHERE
+                    co.course_dept = d.class_dept
+                    AND co.course_number = d.class_number
+                    AND d.grade_earned NOT IN ('IN', 'D', 'F', 'U')));
+
+
+/* returns completed name of concentration */
+SELECT
+    *
+FROM
+    concentration c1
+WHERE (
+    SELECT
+        c2.c_name
+    FROM
+        concentration c2
+    WHERE
+        NOT EXISTS (
+            SELECT
+                *
+            FROM
+                concentration_course co
+            WHERE
+                c2.c_name = co.cname
+                AND NOT EXISTS (
+                    SELECT
+                        *
+                    FROM
+                        degree_audit d2
+                    WHERE
+                        co.course_dept = d2.class_dept
+                        AND co.course_number = d2.class_number
+                        AND d2.grade_earned NOT IN ('IN', 'D', 'F', 'U')))) = c1.c_name
+        AND c1.min_gpa <= (
+            SELECT
+                completed_con.gpa
+            FROM (
+                SELECT
+                    sum(unit * number_grade) / sum(unit) AS gpa
+                FROM
+                    degree_audit d1
+                    INNER JOIN grade_conversion g ON g.letter_grade = d1.grade_earned
+                    INNER JOIN concentration_course co2 ON co2.course_dept = d1.class_dept
+                        AND co2.course_number = d1.class_number
+                    INNER JOIN concentration c3 ON co2.cname = c3.c_name) AS completed_con);
 

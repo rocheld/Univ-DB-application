@@ -102,7 +102,7 @@
                     Statement statement = conn.createStatement();
                     // Use the created statement to SELECT
                     // the student attributes FROM the Student table.
-                    ResultSet rs = statement.executeQuery("select * from section s, classes c where s.class_id = c.index");
+                    ResultSet rs = statement.executeQuery("select * from section s, classes c where s.class_id = c.index order by section_id::Integer asc" );
                     %>
 
                     <!-- Add an HTML table header row to format the results -->

@@ -39,9 +39,9 @@
                 PreparedStatement pstmt = conn.prepareStatement(
                     "SELECT st.* " +
                     "FROM student st " +
-                    "INNER JOIN undergraduate u ON u.pid = st.student_id " +
-                    "AND u.degree_name = 'Computer Science' " +
-                    "AND u.degree_type = 'B.S' " +
+                    "INNER JOIN MS m ON m.pid = st.student_id " +
+                    "AND m.degree_name = 'Computer Science' " +
+                    "AND m.degree_type = 'M.S' " +
                     "WHERE EXISTS ( SELECT DISTINCT en.pid " +
                     "FROM courseEnrollment en " +
                     "WHERE en.pid = st.student_id " +
@@ -54,7 +54,7 @@
                 PreparedStatement degree_pstmt = conn.prepareStatement(
                     "SELECT	d.* " + 
                     "FROM	degree d " + 
-                    "WHERE  d.degree_name = 'Computer Science' "
+                    "WHERE  d.degree_type = 'M.S' "
                 );
 
                 dd = degree_pstmt.executeQuery();
@@ -71,9 +71,9 @@
                 if (action != null && action.equals("search")) {
                     conn.setAutoCommit(false);                  
                     PreparedStatement pstmt2 = conn.prepareStatement(
-                        "SELECT     st.*, u.* " + 
+                        "SELECT     st.*, m.* " + 
                         "FROM       student st " +
-                        "INNER JOIN undergraduate u ON st.student_id = u.pid " +
+                        "INNER JOIN MS m ON st.student_id = m.pid " +
                         "where st.student_ssn = ? "
                     );
                     st_ssn = request.getParameter("value_student");
@@ -100,7 +100,7 @@
             
                 <table border="1">
                     <th>Select
-                    <form action="undergrad_requirement.jsp" method="POST">
+                    <form action="ms_requirement.jsp" method="POST">
                         <select name="value_student">
                         <% while (ss.next()) { 
                            String att = ss.getString("first_name") + " " + 
@@ -310,16 +310,48 @@
                             </td>
                         </tr>
                     <% }
-               
-                PreparedStatement stmt7 = conn.prepareStatement(
-                    "drop table degree_audit"
-                );
-                stmt7.executeUpdate();
-                
-                conn.commit();
-                conn.setAutoCommit(true);
-                temp.close();
-                
+                    %>
+                    <tr>
+                        <th>
+                            Completed Concentration
+                        </th>
+                    </tr>
+                    <%
+                    PreparedStatement completed_concentration = conn.prepareStatement (
+                        "SELECT * FROM concentration c1 " +
+                        "WHERE ( SELECT c2.c_name FROM concentration c2 " +
+                                "WHERE NOT EXISTS ( SELECT * FROM concentration_course co " +
+                                                   "WHERE c2.c_name = co.cname " +
+                                                   "AND NOT EXISTS ( SELECT * FROM degree_audit d2 " +
+                                                                    "WHERE co.course_dept = d2.class_dept " +
+                                                                    "AND co.course_number = d2.class_number " +
+                                                                    "AND d2.grade_earned NOT IN ('IN', 'D', 'F', 'U')))) = c1.c_name " +
+                        "AND c1.min_gpa <= ( SELECT completed_con.gpa " +
+                        "FROM (SELECT sum(unit * number_grade) / sum(unit) AS gpa FROM degree_audit d1 " +
+                        "INNER JOIN grade_conversion g ON g.letter_grade = d1.grade_earned " +
+                        "INNER JOIN concentration_course co2 ON co2.course_dept = d1.class_dept " +
+                        "AND co2.course_number = d1.class_number " +
+                        "INNER JOIN concentration c3 ON co2.cname = c3.c_name) AS completed_con) "
+                    );
+
+                    ResultSet compl_conc = completed_concentration.executeQuery();
+
+                    while(compl_conc.next()) { %>
+                        <tr>
+                            <td>
+                                <input value="<%= compl_conc.getString("c_name") %>" 
+                                    name="conc" size="10" readonly>
+                            </td>
+                        </tr>
+                    <%}
+                    PreparedStatement stmt7 = conn.prepareStatement(
+                        "drop table degree_audit"
+                    );
+                    stmt7.executeUpdate();
+                    
+                    conn.commit();
+                    conn.setAutoCommit(true);
+                    temp.close();
                }
             %>
             <%-- -------- Close Connection Code -------- --%>
